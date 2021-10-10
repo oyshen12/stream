@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hello world</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <script></script>
+  </head>
+
+  <body>
+    <video id="video" controls="" muted="muted" autoplay></video>
+    <script>
+      var socket = io();
+
+      var arrayOfBlobs = [];
+      // setInterval(function () {
+      //   arrayOfBlobs.push(nextChunk());
+      //   // NEW: Try to flush our queue of video data to the video element
+      //   appendToSourceBuffer();
+      // }, 1000);
+
+      var response;
+      socket.on('chank', (msg) => {
+        response = msg;
+        if (msg) {
+          let blobArr = new Blob([msg], { type: 'video\/mp4' });
+          arrayOfBlobs.push(blobArr);
+          appendToSourceBuffer();
+        }
+      });
+
+      async function handleData(event) {
+        if (event) {
+          var buffer = await event.arrayBuffer(); // convert the message Blob into an ArrayBuffer
+          sourceBuffer.appendBuffer(buffer);
+        }
+      }
+
+      // 1. Create a `MediaSource`
+      var mediaSource = new MediaSource();
+
+      // 2. Create an object URL from the `MediaSource`
+      var url = URL.createObjectURL(mediaSource);
+
+      // 3. Set the video's `src` to the object URL
+      var video = document.getElementById('video');
+      video.src = url;
+
+      // 4. On the `sourceopen` event, create a `SourceBuffer`
+      var sourceBuffer = null;
+      mediaSource.addEventListener('sourceopen', function () {
+        // NOTE: Browsers are VERY picky about the codec being EXACTLY
+        // right here. Make sure you know which codecs you're using!
+        sourceBuffer = mediaSource.addSourceBuffer(
+          'video/mp4; codecs="avc1.42E01E, mp4a.40.2"'
+        );
+
+        // If we requested any video data prior to setting up the SourceBuffer,
+        // we want to make sure we only append one blob at a time
+        sourceBuffer.addEventListener('updateend', appendToSourceBuffer);
+      });
+
+      // 5. Use `SourceBuffer.appendBuffer()` to add all of your chunks to the video
+      function appendToSourceBuffer() {
+        if (
+          mediaSource.readyState === 'open' &&
+          sourceBuffer &&
+          sourceBuffer.updating === false
+        ) {
+          //sourceBuffer.appendBuffer(arrayOfBlobs.shift());
+          handleData(arrayOfBlobs.shift());
+        }
+
+        if (
+          video.buffered.length &&
+          video.buffered.end(0) - video.buffered.start(0) > 1200
+        ) {
+          sourceBuffer.remove(0, video.buffered.end(0) - 1200);
+        }
+      }
+      // 1. Create a `MediaSource`
+    </script>
+  </body>
+</html>
